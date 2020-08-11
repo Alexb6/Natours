@@ -7,7 +7,7 @@ class APIFeatures {
     }
     /* Creation of a querying method for each functionnality */
     filter() {
-        const queryObj = { ...this.queryString }; /* shallow copy using spread syntax or Object.assign() */
+        const queryObj = { ...this.queryString }; /* weak copy using spread syntax or Object.assign() */
         const excludedFields = ['page', 'sort', 'limit', 'fields'];
         excludedFields.forEach(el => delete queryObj[el]);
 

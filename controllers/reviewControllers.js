@@ -1,34 +1,19 @@
 const Review = require('../models/reviewModel');
-const catchAsync = require('../utils/catchAsync');
-const AppError = require('./../utils/appError');
+const handlerFactory = require('./handlerFactory');
 
-exports.getAllReviews = catchAsync(async (req, res, next) => {
-    let filter = {}; // Empty object will req all reviews
-    /* Thanks to mergeParams: true, we have access to tourId */
-    if (req.params.tourId) filter = { tour: req.params.tourId };
+/* For nested routes: if there's no tour id in the body, get it in the URL, get user id from protect middleware */
+exports.setTourUserIds = (req, res, next) => {
+    if(!req.body.tour) req.body.tour = req.params.tourId;
+    if(!req.body.user) req.body.user = req.user.id;
+    next();
+};
 
-    const reviews = await Review.find(filter);
+exports.getAllReviews = handlerFactory.getAll(Review);
 
-    res.status(200).json({
-        status: 'success',
-        results: reviews.length,
-        data: {
-            reviews
-        }
-    });
-});
+exports.getReview = handlerFactory.getOne(Review);
 
-exports.createReview = catchAsync(async (req, res, next) => {
-    /* Nested routes: if ther's no tour id in the body, get it in the URL, get user id from protect middleware */
-    if (!req.body.tour) req.body.tour = req.params.tourId;
-    if (!req.body.user) req.body.user = req.user.id;
+exports.createReview = handlerFactory.createOne(Review);
 
-    const newReview = await Review.create(req.body);
+exports.updateReview = handlerFactory.updateOne(Review);
 
-    res.status(201).json({
-        status: 'success',
-        data: {
-            newReview
-        }
-    })
-});
+exports.deleteReview = handlerFactory.deleteOne(Review);

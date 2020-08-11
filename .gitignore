@@ -1,5 +1,12 @@
-tourControllers.01.beforeOnlineBase.js
-tourControllers.02.beforeRefactoring.js
-tourControllers.03.beforeCatchAsync.js
+node_modules/*
+
+controllers/tourControllers.01.beforeOnlineBase.js
+controllers/tourControllers.02.beforeRefactoring.js
+controllers/tourControllers.03.beforeCatchAsync.js
+controllers/tourControllers.04.beforeHandlerFactory.js
+controllers/reviewControllers.01.beforeHandlerFactory.js
+controllers/authController.01.beforeEmailClass.js
 
 config.env
+
+.cache/*

@@ -11,18 +11,30 @@ const router = express.Router();
 
 /* Create a route for the best 5 tours, well rated and at a low price, use of middleware to filter the query */
 router.route('/top-5-cheap')
-    .get(tourControllers.aliasTopTours, tourControllers.getAllTours)
+    .get(tourControllers.aliasTopTours, tourControllers.getAllTours);
 
 router.route('/tour-stats').get(tourControllers.getTourStats);
-router.route('/monthly-plan/:year').get(tourControllers.getMonthlyPlan);
+
+router.route('/monthly-plan/:year')
+    .get(authController.protect, authController.restrictTo('admin', 'lead-guide', 'guide'), tourControllers.getMonthlyPlan);
+
+/* Routes for Geospatial queries & aggregation */
+router.route('/tours-within/:distance/center/:latlng/unit/:unit').get(tourControllers.getToursWithin);
+router.route('/distances/:latlng/unit/:unit').get(tourControllers.getDistances);
 
 router.route('/')
-    .get(authController.protect, tourControllers.getAllTours)
-    .post(/* tourControllers.checkBody,  */tourControllers.createTour);
+    .get(tourControllers.getAllTours)
+    .post(authController.protect, authController.restrictTo('admin', 'lead-guide'), tourControllers.createTour);
 
 router.route('/:id')
     .get(tourControllers.getTour)
-    .patch(tourControllers.updateTour)
+    .patch(
+        authController.protect,
+        authController.restrictTo('admin', 'lead-guide'),
+        tourControllers.uploadTourImages,
+        tourControllers.resizeTourImages,
+        tourControllers.updateTour
+    )
     .delete(authController.protect, authController.restrictTo('admin', 'lead-guide'), tourControllers.deleteTour);
 
 /* Nested review creation route inside tour */

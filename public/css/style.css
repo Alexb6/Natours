@@ -557,19 +557,29 @@ body {
   width: 32px;
   height: 40px;
   cursor: pointer;
+  z-index: 2;
 }
 
 .mapboxgl-popup {
   max-width: 25rem;
+  color: darkgreen;
+  border-radius: 10px;
 }
 
 .mapboxgl-popup-content {
   text-align: center;
   font-family: 'Lato', sans-serif;
-  padding: 1.5rem !important;
+  padding: 1.2rem !important;
   font-size: 1.4rem;
   -webkit-box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.15) !important;
   box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.15) !important;
+  background-color: rgb(217, 233, 217) !important;
+  opacity: 0.8;
+  z-index: 1;
+}
+
+.mapboxgl-popup-tip {
+  display: none;
 }
 
 .section-reviews {

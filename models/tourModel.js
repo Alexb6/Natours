@@ -26,7 +26,6 @@ const tourSchema = new mongoose.Schema({
     },
     priceDiscount: {
         type: Number,
-
         validate: { // Custom validator will be either true or false (falsy will return an error)
             validator: function (discountPrice) {
                 // this keyword is valid for creation of a new doc and not w the upadate
@@ -39,7 +38,8 @@ const tourSchema = new mongoose.Schema({
         type: Number,
         default: 4.5,
         min: [1, 'Rating must be above 1.0'], // Built-in Number & Dates Validator
-        max: [5, 'Rating must be under 5.0'] // Built-in Number & Dates Validator
+        max: [5, 'Rating must be under 5.0'], // Built-in Number & Dates Validator
+        set: val => Math.round(val * 100) / 100
     },
     ratingsQuantity: {
         type: Number,
@@ -131,6 +131,11 @@ const tourSchema = new mongoose.Schema({
     toObject: { virtuals: true }
 });
 
+/* Tours indexes */
+tourSchema.index({ price: 1, ratingsAverage: -1 });
+tourSchema.index({ slug: 1 });
+tourSchema.index({ startLocation: '2dsphere' });
+
 /* Virtual properties, use regular fct° because arrow fct° doesn't have "this" keyword */
 // But cannot use it in a query because it's not technically part of the base
 tourSchema.virtual('durationWeeks').get(function () {
@@ -180,14 +185,14 @@ tourSchema.pre(/^find/, function (next) {
 })
 
 /* Aggregation middleware, adding stages to all the aggration in one place */
-tourSchema.pre('aggregate', function (next) {
-    this.pipeline().unshift({ $match: { secretTour: { $ne: true } } })
-    // console.log(this.pipeline());
-    next();
-});
+// tourSchema.pre('aggregate', function (next) {
+//     this.pipeline().unshift({ $match: { secretTour: { $ne: true } } })
+//     // console.log(this.pipeline());
+//     next();
+// });
 
 /* Definition of a model(first letter capitalized) to create a document */
-// MongoDB will use this model to create a collection w the same name but in plurial : tours
+// MongoDB will use this model to create a collection w the same name but in plural : tours
 const Tour = mongoose.model('Tour', tourSchema);
 
 module.exports = Tour;

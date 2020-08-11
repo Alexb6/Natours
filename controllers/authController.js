@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const User = require('./../models/userModel');
 const catchAsync = require('./../utils/catchAsync');
 const AppError = require('./../utils/appError');
-const sendEmail = require('./../utils/emailNodeMailer');
+const Email = require('./../utils/email');
 const crypto = require('crypto');
 
 /* Creation of the token */
@@ -39,6 +39,9 @@ const createSendToken = (user, statusCode, res) => {
 exports.signup = catchAsync(async (req, res, next) => {
     const newUser = await User.create(req.body);
 
+    const url = `${req.protocol}://${req.get('host')}/me`;
+    await new Email(newUser, url).sendWelcome();
+
     createSendToken(newUser, 201, res);
 });
 
@@ -69,7 +72,10 @@ exports.protect = catchAsync(async (req, res, next) => {
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1]; // split the string separated by a space into an array
         // console.log(token);        
+    } else if (req.cookies.jwt) {
+        token = req.cookies.jwt;
     }
+
     if (!token) {
         return next(new AppError('To get access, you need to login!', 401));
     }
@@ -87,8 +93,42 @@ exports.protect = catchAsync(async (req, res, next) => {
     }
     /* 5) Grant acces to protected route if passed all conditions */
     req.user = currentUser; // pass the user data to the next middleware
+    res.locals.user = currentUser; // make user a var for pugs files
     next();
 });
+
+/* Log out the user, w- the token in the response */
+exports.logout = (req, res) => {
+    res.cookie('jwt', 'loggedOut', {
+        expires: new Date(Date.now() + 10 * 1000),
+        httpOnly: true
+    });
+    res.status(200).json({ status: 'success' });
+};
+
+/* Verify if the user is logged in for rendering pages, no errors hadling here */
+exports.isLoggedIn = async (req, res, next) => {
+    try {
+        if (req.cookies.jwt) {
+            /* 1) Verify the validity of the token(if someone manipulated it or has expired) */
+            const decoded = await promisify(jwt.verify)(req.cookies.jwt, process.env.JWT_SECRET); // decoded:{id, iat, exp}
+
+            /* 2) Check if the user with this token still exists (in case the user has been deleted in the meantime) */
+            const currentUser = await User.findById(decoded.id); // user id from the decoded payload
+            if (!currentUser) return next();
+
+            /* 3) Check if user changed password after the token was issued */
+            if (currentUser.changedPasswordAfter(decoded.iat)) return next();
+
+            /* 4) If pass all steps, then make the logged in user data accessible to pug files */
+            res.locals.user = currentUser; // make user a var for pugs files
+            return next();
+        }
+    } catch (err) {
+        return next();
+    };
+    next();
+};
 
 /* Role administration: normally we cannot pass args to a middleware, 
 so we create a wrapper fct° that returns the middlaware, so it can access to args w closure principle */
@@ -114,15 +154,9 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
     await user.save({ validateBeforeSave: false }); // deactivate the validators because there's no value in passwordConfirm
 
     /* 3) Send it to user's email */
-    const resetURL = `${req.protocol}://${req.get('host')}/api/v1/users/resetPassword/${resetToken}`;
-    const message = `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to:\n${resetURL}\nIf you didn't forget your password, please ignore this email!`;
-
+    const resetURL = `${req.protocol}://${req.get('host')}/api/v1/users/resetPassword/${resetToken}`;    
     try {
-        await sendEmail({
-            email: req.body.email,
-            subject: 'Your password reset token (Valid for 2 hours only!)',
-            message
-        });
+        await new Email(user, resetURL).sendPasswordReset();
 
         res.status(200).json({
             status: 'success',

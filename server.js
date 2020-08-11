@@ -10,7 +10,7 @@ process.on('uncaughtException', err => {
     process.exit(1); // 1 for uncaught exceptions
 });
 
-// console.log(x);
+
 
 const app = require('./app');
 

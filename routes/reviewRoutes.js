@@ -8,8 +8,16 @@ Now POST '/:tourId/reviews' or '/reviews' will use the ('/').post route below to
 Same for GET '/:tourId/reviews', will use the ('/').get route below to retrieve a review of this tour id */
 const router = express.Router({ mergeParams: true });
 
+/* All reviews routes are protected for authentication */
+router.use(authController.protect);
+
 router.route('/')
     .get(reviewControllers.getAllReviews)
-    .post(authController.protect, authController.restrictTo('user'), reviewControllers.createReview);
+    .post(authController.restrictTo('user'), reviewControllers.setTourUserIds, reviewControllers.createReview);
+
+router.route('/:id')
+    .get(reviewControllers.getReview)
+    .patch(authController.restrictTo('user', 'admin'), reviewControllers.updateReview)
+    .delete(authController.restrictTo('user', 'admin'), reviewControllers.deleteReview);
 
 module.exports = router;

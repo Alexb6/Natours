@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Tour = require('./tourModel');
 
 const reviewSchema = new mongoose.Schema({
     review: {
@@ -29,6 +30,33 @@ const reviewSchema = new mongoose.Schema({
     toObject: { virtuals: true }
 });
 
+/* Reviews index to prevent the user to review a tour multiple times */
+reviewSchema.index({tour: 1, user: 1}, {unique: true});
+
+/* Static method to calculate the average rating */
+reviewSchema.statics.calcAverageRatings = async function(tourId) {
+    const stats = await this.aggregate([
+        {$match: {tour: tourId}},
+        {$group: {
+            _id: '$tour',
+            nRating: {$sum: 1},
+            avgRating: {$avg :'$rating'}
+        }}
+    ]);
+
+    if(stats.length > 0) {
+        await Tour.findByIdAndUpdate(tourId, {
+            ratingsQuantity: stats[0].nRating,
+            ratingsAverage: stats[0].avgRating
+        });
+    } else {
+        await Tour.findByIdAndUpdate(tourId, {
+            ratingsQuantity: 0,
+            ratingsAverage: 4.5
+        });
+    }
+};
+
 /* Query Pre Middleware to populate the reviews */
 reviewSchema.pre(/^find/, function(next) {
     this.populate({
@@ -40,6 +68,21 @@ reviewSchema.pre(/^find/, function(next) {
     //     select: 'name'
     // });
     next();
+});
+
+/* Calling the static method calcAverageRatings to calculate some stats on the review */
+reviewSchema.post('save', function() {
+    this.constructor.calcAverageRatings(this.tour);
+});
+
+/*  */
+reviewSchema.pre(/^findOneAnd/, async function(next) {
+    this.currentReview = await this.findOne();
+    next();
+});
+
+reviewSchema.post(/^findOneAnd/, async function() {
+    await this.currentReview.constructor.calcAverageRatings(this.currentReview.tour);
 });
 
 const Review = mongoose.model('Review', reviewSchema);
